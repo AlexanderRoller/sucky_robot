@@ -1,3 +1,5 @@
+# 🤖 Sucky Robot
+
 ![Sucky Robot](media/sucky.jpeg)
 
 A ROS2-based differential drive robot with advanced sensor integration, autonomous navigation, and teleoperation capabilities.
