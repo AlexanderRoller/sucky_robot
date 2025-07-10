@@ -81,11 +81,17 @@ pip install pyserial
 
 ### Build Instructions
 ```bash
-# Clone the repository
-git clone <repository_url> ~/sucky_robot
+# Clone the repository with submodules
+git clone --recursive <repository_url> ~/sucky_robot
 cd ~/sucky_robot
 
-# Build the workspace
+# If you've already cloned without --recursive, initialize submodules:
+# git submodule update --init --recursive
+
+# Option 1: Use the automated setup script (recommended)
+./setup.sh
+
+# Option 2: Manual build
 colcon build --symlink-install
 
 # Source the workspace
@@ -102,7 +108,10 @@ The repository includes convenient shell scripts for common operations:
 source build.sh
 
 # Launch the robot system
-source launch.sh
+source launch_sucky.sh
+
+# Launch the host system
+source launch_host.sh
 ```
 
 ### ROS2 Networking Setup
@@ -226,7 +235,17 @@ sucky_robot/
 
 ### Common Issues
 
-#### 1. Serial Port Access
+#### 1. Missing Roboclaw Packages
+If the roboclaw packages are missing after cloning:
+```bash
+# Initialize submodules
+git submodule update --init --recursive
+
+# Or run the automated setup
+./setup.sh
+```
+
+#### 2. Serial Port Access
 ```bash
 # Add user to dialout group
 sudo usermod -a -G dialout $USER
@@ -236,7 +255,7 @@ sudo usermod -a -G dialout $USER
 ls -la /dev/ttyACM*
 ```
 
-#### 2. LiDAR Connection
+#### 3. LiDAR Connection
 ```bash
 # Check network connection
 ping 192.168.0.1
@@ -245,7 +264,7 @@ ping 192.168.0.1
 ros2 topic list | grep scan
 ```
 
-#### 3. Camera Issues
+#### 4. Camera Issues
 ```bash
 # Check camera connection
 lsusb | grep Intel
@@ -255,7 +274,7 @@ ros2 lifecycle set /camera/realsense2_camera_node shutdown
 ros2 lifecycle set /camera/realsense2_camera_node activate
 ```
 
-#### 4. Motor Controller
+#### 5. Motor Controller
 ```bash
 # Check roboclaw connection status
 ros2 topic list | grep roboclaw
