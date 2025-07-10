@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>sucky</name>
+  <version>1.0.0</version>
+  <description>ROS2 package for the Sucky robot - includes launch files, configuration, and robot description</description>
+  <maintainer email="lex@example.com">Lex</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Core ROS2 dependencies -->
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>lifecycle_msgs</depend>
+  
+  <!-- Robot description and control -->
+  <depend>xacro</depend>
+  <depend>ros2_control</depend>
+  <depend>ros2_controllers</depend>
+  <depend>controller_manager</depend>
+  
+  <!-- Robot state and joint publishers -->
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  
+  <!-- Launch system -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  
+  <!-- Specific controllers -->
+  <exec_depend>diff_drive_controller</exec_depend>
+  <exec_depend>joint_state_broadcaster</exec_depend>
+  
+  <!-- Sensors and perception -->
+  <exec_depend>sick_scan_xd</exec_depend>
+  <exec_depend>realsense2_camera</exec_depend>
+  
+  <!-- Navigation and localization -->
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  
+  <!-- Teleoperation -->
+  <exec_depend>joy</exec_depend>
+  <exec_depend>teleop_twist_joy</exec_depend>
+  <exec_depend>twist_mux</exec_depend>
+  
+  <!-- Visualization -->
+  <exec_depend>rviz2</exec_depend>
+  
+  <!-- Hardware interface dependencies -->
+  <exec_depend>roboclaw_hardware_interface</exec_depend>
+  <exec_depend>roboclaw_serial</exec_depend>
+  
+  <!-- Python dependencies for serial communication -->
+  <exec_depend>python3-serial</exec_depend>
+  
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

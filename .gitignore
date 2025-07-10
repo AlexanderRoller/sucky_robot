@@ -1,0 +1,13 @@
+# ROS 2 build files
+build/
+install/
+log/
+
+miscellaneous/
+# Python cache
+*.pyc
+__pycache__/
+frames_*
+
+# Editor settings
+.vscode/

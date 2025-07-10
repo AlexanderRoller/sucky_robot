@@ -1,0 +1,22 @@
+# Roboclaw Battery Monitor Configuration
+
+roboclaw_battery_monitor:
+  ros__parameters:
+    serial_port: "/dev/ttyACM0"      
+    address: 128                      # Roboclaw address (same as motor control)
+    baud_rate: 115200                # Serial baud rate
+    timeout: 2.0                     # Communication timeout (seconds)
+    retry_attempts: 3                # Number of retry attempts per reading
+    
+    # Publishing settings
+    publish_rate: 0.5                # Publish rate in Hz (0.5 Hz = every 2 seconds)
+                                     # Slower rate reduces interference with motor control
+    
+    # Battery voltage thresholds (adjust for your battery type)
+    min_voltage: 22.0                # Low battery warning threshold (V)
+    max_voltage: 29.4                # High battery warning threshold (V)
+                                     # Example for 7S LiPo: 25.2V nominal, 29.4V full, 21.0V cutoff
+                                     # Example for 6S LiPo: 22.2V nominal, 25.2V full, 18.0V cutoff
+    
+    # Diagnostics
+    use_sim_time: false              # Set to true for simulation

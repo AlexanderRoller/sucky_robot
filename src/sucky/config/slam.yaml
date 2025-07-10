@@ -1,0 +1,78 @@
+slam_toolbox:
+  ros__parameters:
+
+    # Plugin params - Optimized for better performance
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY # Better for larger problems
+    ceres_preconditioner: SCHUR_JACOBI # Use preconditioner for better convergence
+    ceres_trust_strategy: LEVENBERG_MARQUARDT
+    ceres_dogleg_type: TRADITIONAL_DOGLEG
+    ceres_loss_function: HuberLoss # More robust to outliers
+
+    # ROS Parameters
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_footprint
+    scan_topic: /scan
+    scan_queue_size: 10 # Increased for better handling
+    use_map_saver: true
+    mode: mapping #localization
+
+    # if you'd like to immediately start continuing a map at a given pose
+    # or at the dock, but they are mutually exclusive, if pose is given
+    # will use pose
+    #map_file_name: test_steve
+    # map_start_pose: [0.0, 0.0, 0.0]
+    #map_start_at_dock: true
+
+    debug_logging: false
+    throttle_scans: 1 # Reduced for better mapping quality
+    transform_publish_period: 0.02 # Increased frequency for smoother localization
+    map_update_interval: 0.05 # More frequent updates for dynamic environments
+    resolution: 0.05 # Good balance of detail and performance
+    min_laser_range: 0.1 # Ignore very close readings (noise)
+    max_laser_range: 12.0 # Optimized for indoor environments
+    minimum_time_interval: 0.05 # Reduced for more responsive mapping
+    transform_timeout: 0.5 # More generous timeout
+    tf_buffer_duration: 30.0 # Sufficient buffer for most applications
+    stack_size_to_use: 40000000 #// program needs a larger stack size to serialize large maps
+    enable_interactive_mode: true
+
+    # General Parameters - Optimized for better mapping
+    use_scan_matching: true
+    use_scan_barycenter: true
+    minimum_travel_distance: 0.2 # Increased to reduce computational load
+    minimum_travel_heading: 0.1 # Increased to reduce computational load
+    scan_buffer_size: 20 # Increased buffer for better matching
+    scan_buffer_maximum_scan_distance: 15.0 # Increased for better range
+    link_match_minimum_response_fine: 0.2 # More selective matching
+    link_scan_maximum_distance: 2.0 # Increased for better connectivity
+    loop_search_maximum_distance: 8.0 # Increased for better loop closure
+    do_loop_closing: true # Essential for accurate mapping
+    loop_match_minimum_chain_size: 8 # Reduced for more frequent loop closures
+    loop_match_maximum_variance_coarse: 2.0 # Tightened for better accuracy
+    loop_match_minimum_response_coarse: 0.4 # More selective
+    loop_match_minimum_response_fine: 0.5 # More selective
+
+    # Correlation Parameters - Optimized for accuracy
+    correlation_search_space_dimension: 0.3 # Reduced for faster processing
+    correlation_search_space_resolution: 0.01 # Good resolution
+    correlation_search_space_smear_deviation: 0.05 # Reduced for precision
+
+    # Correlation Parameters - Loop Closure Parameters
+    loop_search_space_dimension: 6.0 # Reduced for efficiency
+    loop_search_space_resolution: 0.05
+    loop_search_space_smear_deviation: 0.03
+
+    # Scan Matcher Parameters - Balanced for performance and accuracy
+    distance_variance_penalty: 0.8 # Slightly reduced
+    angle_variance_penalty: 1.2 # Increased for better angular accuracy
+
+    fine_search_angle_offset: 0.00349 # ~0.2 degrees
+    coarse_search_angle_offset: 0.349 # ~20 degrees
+    coarse_angle_resolution: 0.0349 # ~2 degrees
+    minimum_angle_penalty: 0.9 # Increased for better angular control
+    minimum_distance_penalty: 0.5
+    use_response_expansion: true
+    min_pass_through: 3 # Increased for more robust matching
+    occupancy_threshold: 0.15 # Slightly increased for cleaner maps
