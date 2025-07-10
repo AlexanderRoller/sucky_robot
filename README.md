@@ -1,4 +1,11 @@
-# Sucky Robot 🤖
+# Suck## 👥 Credits
+
+Developed by:
+- **Alexnader Roller** ([AlexanderRoller](https://github.com/AlexanderRoller)) - Systems integration
+- **Jason Koubi** ([jkoubs](https://github.com/jkoubs)) - Software and simulation
+- **Benjamin Cantarero** - Mechanical design
+
+## 📋 Table of Contents🤖
 
 ![Sucky Robot](media/sucky.jpeg)
 
@@ -7,7 +14,7 @@ A ROS2-based differential drive robot with advanced sensor integration, autonomo
 ## � Credits
 
 Developed by:
-- **Alexnader Roller** - Systems integration
+- **Alexnader Roller** ([AlexanderRoller](https://github.com/AlexanderRoller)) - Systems integration
 - **Jason Koubi** ([jkoubs](https://github.com/jkoubs)) - Software and simulation
 - **Benjamin Cantarero** - Mechanical design
 
