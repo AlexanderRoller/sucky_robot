@@ -156,7 +156,6 @@ def generate_launch_description():
     return LaunchDescription([
         joint_state_publisher,
         robot_state_publisher,
-        rviz_node,
         joystick_node,
         teleop_node,
         ros2_control_node,
