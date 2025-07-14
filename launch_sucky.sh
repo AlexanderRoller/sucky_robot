@@ -2,4 +2,4 @@
 
 colcon build --symlink-install
 source install/setup.bash
-ros2 launch sucky sucky_launch.py 
+ros2 launch sucky sucky.launch.py 

@@ -8,7 +8,7 @@ def generate_launch_description():
     # Declare launch arguments
     serial_port_arg = DeclareLaunchArgument(
         'serial_port',
-        default_value='/dev/ttyACM0',
+        default_value='/dev/ttyACM1',
         description='Serial port for roboclaw communication (shared with ROS2 control)'
     )
     

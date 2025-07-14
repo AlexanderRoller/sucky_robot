@@ -13,6 +13,7 @@
   <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>diagnostic_msgs</depend>
   <depend>lifecycle_msgs</depend>
   

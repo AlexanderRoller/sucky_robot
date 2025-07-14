@@ -128,17 +128,17 @@ def generate_launch_description():
 
     slam_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
-        get_package_share_directory('sucky'),'launch','sucky_slam.py'
+        get_package_share_directory('sucky'),'launch','slam.launch.py'
         )]), launch_arguments={'use_sim_time': 'false'}.items()
     )
 
     battery_monitor_node = Node(
         package='sucky',
-        executable='roboclaw_battery_monitor_shared.py',
-        name='roboclaw_battery_monitor_shared',
+        executable='battery_monitor.py',
+        name='battery_monitor',
         output='log',  # Reduce output
         parameters=[{
-            'serial_port': '/dev/ttyACM0', 
+            'serial_port': '/dev/ttyACM1', 
             'address': 128,
             'publish_rate': 0.1, 
             'min_voltage': 22.0,
@@ -149,8 +149,36 @@ def generate_launch_description():
 
     realsense_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory('sucky'), 'launch', 'realsense_launch.py'
+            get_package_share_directory('sucky'), 'launch', 'realsense.launch.py'
         )])
+    )
+
+    # Cyclone controller node
+    cyclone_controller_node = Node(
+        package='sucky',
+        executable='cyclone_controller.py',
+        name='cyclone_controller',
+        output='log',
+        parameters=[{
+            'serial_port': '/dev/ttyACM0',
+            'baud_rate': 9600,
+            'timeout': 2.0,
+            'use_sim_time': False
+        }]
+    )
+
+    # Servo controller node  
+    servo_controller_node = Node(
+        package='sucky',
+        executable='servo_controller.py',
+        name='servo_controller',
+        output='log',
+        parameters=[{
+            'serial_port': '/dev/ttyACM0',
+            'baud_rate': 9600,
+            'timeout': 2.0,
+            'use_sim_time': False
+        }]
     )
 
     return LaunchDescription([
@@ -167,4 +195,6 @@ def generate_launch_description():
         ekf_node,
         slam_node,
         battery_monitor_node,
+        cyclone_controller_node,
+        servo_controller_node,
     ])

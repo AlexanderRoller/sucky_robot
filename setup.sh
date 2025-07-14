@@ -51,7 +51,7 @@ if command -v colcon &> /dev/null; then
     echo ""
     echo "🚀 To get started:"
     echo "   source install/setup.bash"
-    echo "   ros2 launch sucky sucky_launch.py"
+    echo "   ros2 launch sucky sucky.launch.py"
 else
     echo "   ⚠️  colcon not found. Please install ROS2 colcon tools."
     echo "   You can install with: sudo apt install python3-colcon-common-extensions"

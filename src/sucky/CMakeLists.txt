@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(ros2_control REQUIRED)
 find_package(ros2_controllers REQUIRED)
@@ -22,16 +23,23 @@ find_package(lifecycle_msgs REQUIRED)
 
 # Install directories
 install(
-  DIRECTORY launch config meshes urdf
+  DIRECTORY launch config meshes urdf nodes tools test
   DESTINATION share/${PROJECT_NAME}
 )
 
-# Install Python scripts
+# Install Python nodes
 install(PROGRAMS
-  scripts/roboclaw_battery_monitor_shared.py
-  scripts/plc/getClock.py
-  scripts/plc/setClock.py
-  scripts/plc/troubleshoot_plc.py
+  nodes/battery_monitor.py
+  nodes/cyclone_controller.py
+  nodes/servo_controller.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install utility tools
+install(PROGRAMS
+  tools/plc/getClock.py
+  tools/plc/setClock.py
+  tools/plc/troubleshoot_plc.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

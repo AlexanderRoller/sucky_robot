@@ -1,8 +1,8 @@
-# Roboclaw Battery Monitor Configuration
+# Battery Monitor Configuration
 
-roboclaw_battery_monitor:
+battery_monitor:
   ros__parameters:
-    serial_port: "/dev/ttyACM0"      
+    serial_port: "/dev/ttyACM1"      
     address: 128                      # Roboclaw address (same as motor control)
     baud_rate: 115200                # Serial baud rate
     timeout: 2.0                     # Communication timeout (seconds)

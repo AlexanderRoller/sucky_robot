@@ -12,17 +12,17 @@ import fcntl
 import errno
 from threading import Lock
 
-class RoboclawBatteryMonitorShared(Node):
+class BatteryMonitor(Node):
     """
     Battery monitor that reads voltage directly from serial port
     with very low update rates to minimize interference with ROS2 control.
     """
     
     def __init__(self):
-        super().__init__('roboclaw_battery_monitor_shared')
+        super().__init__('battery_monitor')
         
         # Parameters
-        self.declare_parameter('serial_port', '/dev/ttyACM0')
+        self.declare_parameter('serial_port', '/dev/ttyACM1')
         self.declare_parameter('address', 128)
         self.declare_parameter('publish_rate', 0.2)  # Very slow rate to minimize interference
         self.declare_parameter('timeout', 3.0)  # Longer timeout for shared access
@@ -110,7 +110,7 @@ class RoboclawBatteryMonitorShared(Node):
                     crc = crc << 1
                 crc = crc & 0xFFFF
         return crc
-    def read_battery_voltage_shared(self):
+    def read_battery_voltage(self):
         """Read battery voltage with shared serial access considerations"""
         if not self.serial_conn or not self.serial_conn.is_open:
             self.connect_serial()
@@ -175,7 +175,7 @@ class RoboclawBatteryMonitorShared(Node):
                         
             except serial.SerialTimeoutError:
                 if attempt == self.retry_attempts - 1:
-                    self.get_logger().debug('Timeout reading from roboclaw (shared mode)')
+                    self.get_logger().debug('Timeout reading from roboclaw ')
             except (serial.SerialException, OSError) as e:
                 if attempt == self.retry_attempts - 1:
                     self.get_logger().warning(f'Serial error reading battery voltage: {e}')
@@ -191,8 +191,8 @@ class RoboclawBatteryMonitorShared(Node):
         return None
     def read_and_publish_battery_voltage(self):
         """Read battery voltage and publish to topics"""
-        voltage = self.read_battery_voltage_shared()
-        
+        voltage = self.read_battery_voltage()
+
         if voltage is not None:
             self.last_valid_voltage = voltage
             
@@ -226,7 +226,7 @@ class RoboclawBatteryMonitorShared(Node):
         diag_array.header.stamp = self.get_clock().now().to_msg()
         
         diag_status = DiagnosticStatus()
-        diag_status.name = 'roboclaw_battery_shared'
+        diag_status.name = 'battery_monitor'
         diag_status.hardware_id = f'roboclaw_address_{self.address}'
         
         if not healthy:
@@ -288,7 +288,7 @@ def main(args=None):
     rclpy.init(args=args)
     
     try:
-        battery_monitor = RoboclawBatteryMonitorShared()
+        battery_monitor = BatteryMonitor()
         rclpy.spin(battery_monitor)
     except KeyboardInterrupt:
         pass
