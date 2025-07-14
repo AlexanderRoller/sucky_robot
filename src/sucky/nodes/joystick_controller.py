@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+
+"""
+ROS2 Node for handling PS4 controller inputs to control cyclone and doors.
+
+This node subscribes to joystick messages and provides button-triggered
+services to toggle the cyclone vacuum and doors on the Sucky robot.
+
+Subscribed Topics:
+  - /joy (sensor_msgs/Joy): Joystick input messages
+
+Service Clients:
+  - /cyclone/set_state (std_srvs/SetBool): Toggle cyclone on/off  
+  - /doors/set_state (std_srvs/SetBool): Toggle doors open/closed
+
+PS4 Controller Button Mapping:
+  - Square (button 0): Toggle cyclone on/off
+  - Triangle (button 2): Toggle doors open/closed  
+  - Circle (button 1): Emergency stop (turn off cyclone and close doors)
+  - Cross (button 3): Status check (log current states)
+
+Parameters:
+  - cyclone_button (int): Button index for cyclone toggle (default: 0 - Square)
+  - doors_button (int): Button index for doors toggle (default: 2 - Triangle)
+  - emergency_button (int): Button index for emergency stop (default: 1 - Circle)
+  - status_button (int): Button index for status check (default: 3 - Cross)
+  - debounce_time (double): Time in seconds to prevent button spam (default: 0.5)
+
+Usage:
+  ros2 run sucky joystick_controller.py
+  
+  or with parameters:
+  ros2 run sucky joystick_controller.py --ros-args -p cyclone_button:=0
+"""
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Joy
+from std_srvs.srv import SetBool
+import time
+
+
+class JoystickController(Node):
+    def __init__(self):
+        super().__init__('joystick_controller')
+        
+        # Declare parameters for button mapping
+        self.declare_parameter('cyclone_button', 0)    # Square button
+        self.declare_parameter('doors_button', 2)      # Triangle button  
+        self.declare_parameter('emergency_button', 1)  # Circle button
+        self.declare_parameter('status_button', 3)     # Cross button
+        self.declare_parameter('debounce_time', 0.5)   # 500ms debounce
+        
+        # Get parameters
+        self.cyclone_button = self.get_parameter('cyclone_button').get_parameter_value().integer_value
+        self.doors_button = self.get_parameter('doors_button').get_parameter_value().integer_value
+        self.emergency_button = self.get_parameter('emergency_button').get_parameter_value().integer_value
+        self.status_button = self.get_parameter('status_button').get_parameter_value().integer_value
+        self.debounce_time = self.get_parameter('debounce_time').get_parameter_value().double_value
+        
+        # State tracking
+        self.cyclone_state = False
+        self.doors_state = False
+        self.last_button_time = {}
+        
+        # Initialize button press times
+        for button in [self.cyclone_button, self.doors_button, self.emergency_button, self.status_button]:
+            self.last_button_time[button] = 0.0
+        
+        # Service clients
+        self.cyclone_client = self.create_client(SetBool, 'cyclone/set_state')
+        self.doors_client = self.create_client(SetBool, 'doors/set_state')
+        
+        # Joy subscriber
+        self.joy_sub = self.create_subscription(
+            Joy, 'joy', self.joy_callback, 10)
+        
+        # Wait for services
+        self.get_logger().info("Waiting for cyclone and doors services...")
+        if not self.cyclone_client.wait_for_service(timeout_sec=5.0):
+            self.get_logger().warn("Cyclone service not available")
+        if not self.doors_client.wait_for_service(timeout_sec=5.0):
+            self.get_logger().warn("Doors service not available")
+        
+        self.get_logger().info("Joystick controller ready!")
+        self.get_logger().info(f"Button mapping:")
+        self.get_logger().info(f"  Square (button {self.cyclone_button}): Toggle cyclone")
+        self.get_logger().info(f"  Triangle (button {self.doors_button}): Toggle doors")
+        self.get_logger().info(f"  Circle (button {self.emergency_button}): Emergency stop")
+        self.get_logger().info(f"  Cross (button {self.status_button}): Status check")
+
+    def joy_callback(self, msg):
+        """Handle joystick button presses"""
+        current_time = time.time()
+        
+        # Check if we have enough buttons
+        if len(msg.buttons) <= max(self.cyclone_button, self.doors_button, 
+                                   self.emergency_button, self.status_button):
+            return
+        
+        # Cyclone toggle (Square button)
+        if (msg.buttons[self.cyclone_button] and 
+            current_time - self.last_button_time[self.cyclone_button] > self.debounce_time):
+            self.last_button_time[self.cyclone_button] = current_time
+            self.toggle_cyclone()
+        
+        # Doors toggle (Triangle button)
+        if (msg.buttons[self.doors_button] and 
+            current_time - self.last_button_time[self.doors_button] > self.debounce_time):
+            self.last_button_time[self.doors_button] = current_time
+            self.toggle_doors()
+        
+        # Emergency stop (Circle button)
+        if (msg.buttons[self.emergency_button] and 
+            current_time - self.last_button_time[self.emergency_button] > self.debounce_time):
+            self.last_button_time[self.emergency_button] = current_time
+            self.emergency_stop()
+        
+        # Status check (Cross button)
+        if (msg.buttons[self.status_button] and 
+            current_time - self.last_button_time[self.status_button] > self.debounce_time):
+            self.last_button_time[self.status_button] = current_time
+            self.log_status()
+
+    def toggle_cyclone(self):
+        """Toggle cyclone state"""
+        new_state = not self.cyclone_state
+        self.get_logger().info(f"Toggling cyclone {'ON' if new_state else 'OFF'}")
+        
+        if self.cyclone_client.service_is_ready():
+            request = SetBool.Request()
+            request.data = new_state
+            
+            future = self.cyclone_client.call_async(request)
+            future.add_done_callback(
+                lambda f: self.cyclone_response_callback(f, new_state))
+        else:
+            self.get_logger().error("Cyclone service not ready")
+
+    def toggle_doors(self):
+        """Toggle doors state"""
+        new_state = not self.doors_state
+        self.get_logger().info(f"Toggling doors {'OPEN' if new_state else 'CLOSED'}")
+        
+        if self.doors_client.service_is_ready():
+            request = SetBool.Request()
+            request.data = new_state
+            
+            future = self.doors_client.call_async(request)
+            future.add_done_callback(
+                lambda f: self.doors_response_callback(f, new_state))
+        else:
+            self.get_logger().error("Doors service not ready")
+
+    def emergency_stop(self):
+        """Emergency stop: turn off cyclone and close doors"""
+        self.get_logger().warn("EMERGENCY STOP activated!")
+        
+        # Turn off cyclone
+        if self.cyclone_client.service_is_ready():
+            request = SetBool.Request()
+            request.data = False
+            future = self.cyclone_client.call_async(request)
+            future.add_done_callback(
+                lambda f: self.cyclone_response_callback(f, False))
+        
+        # Close doors
+        if self.doors_client.service_is_ready():
+            request = SetBool.Request()
+            request.data = False
+            future = self.doors_client.call_async(request)
+            future.add_done_callback(
+                lambda f: self.doors_response_callback(f, False))
+
+    def log_status(self):
+        """Log current status"""
+        self.get_logger().info(f"Current status:")
+        self.get_logger().info(f"  Cyclone: {'ON' if self.cyclone_state else 'OFF'}")
+        self.get_logger().info(f"  Doors: {'OPEN' if self.doors_state else 'CLOSED'}")
+
+    def cyclone_response_callback(self, future, expected_state):
+        """Handle cyclone service response"""
+        try:
+            response = future.result()
+            if response.success:
+                self.cyclone_state = expected_state
+                self.get_logger().info(f"Cyclone successfully {'turned ON' if expected_state else 'turned OFF'}")
+            else:
+                self.get_logger().error(f"Failed to toggle cyclone: {response.message}")
+        except Exception as e:
+            self.get_logger().error(f"Service call failed: {e}")
+
+    def doors_response_callback(self, future, expected_state):
+        """Handle doors service response"""
+        try:
+            response = future.result()
+            if response.success:
+                self.doors_state = expected_state
+                self.get_logger().info(f"Doors successfully {'OPENED' if expected_state else 'CLOSED'}")
+            else:
+                self.get_logger().error(f"Failed to toggle doors: {response.message}")
+        except Exception as e:
+            self.get_logger().error(f"Service call failed: {e}")
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    
+    try:
+        joystick_controller = JoystickController()
+        rclpy.spin(joystick_controller)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"Error in main: {e}")
+    finally:
+        if 'joystick_controller' in locals():
+            joystick_controller.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

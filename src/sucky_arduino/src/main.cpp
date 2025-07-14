@@ -15,7 +15,7 @@ constexpr uint8_t DOOR_LEFT_PIN = 5;   // Left door servo pin
 constexpr uint8_t DOOR_RIGHT_PIN = 3;  // Right door servo pin
 
 // ESC pulse configuration
-constexpr uint16_t PULSE_MIN = 1500;   // µs (idle)
+constexpr uint16_t PULSE_MIN = 1000;   // µs (idle)
 constexpr uint16_t PULSE_MAX = 2000;   // µs (full power)
 
 // Door servo positions
@@ -39,7 +39,7 @@ constexpr unsigned long CYCLONE_TIMEOUT_MS = 600000;
 unsigned long cycloneStartTime = 0;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   doorLeft.attach(5);  // Attach left door servo to pin 5
   doorRight.attach(3); // Attach right door servo to pin 3

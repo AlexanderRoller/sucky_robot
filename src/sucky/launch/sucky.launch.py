@@ -64,6 +64,16 @@ def generate_launch_description():
             remappings=[('/cmd_vel','/cmd_vel_joy')],
     )
 
+    # Joystick controller for cyclone and doors
+    joystick_controller_params = os.path.join(get_package_share_directory('sucky'),'config','joystick_controller.yaml')
+    joystick_controller_node = Node(
+        package='sucky',
+        executable='joystick_controller.py',
+        name='joystick_controller',
+        output='log',
+        parameters=[joystick_controller_params, {'use_sim_time': False}]
+    )
+
     robot_controllers_path = os.path.join(get_package_share_directory('sucky'),'config','sucky_controllers.yaml')
     ros2_control_node = Node(
         package="controller_manager",
@@ -186,6 +196,7 @@ def generate_launch_description():
         robot_state_publisher,
         joystick_node,
         teleop_node,
+        joystick_controller_node,
         ros2_control_node,
         twist_mux,
         robot_controller_spawner,

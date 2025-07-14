@@ -15,7 +15,7 @@ Services:
 
 Parameters:
   - serial_port (string): Arduino serial port (default: /dev/ttyACM0)
-  - baud_rate (int): Serial communication baud rate (default: 9600)
+  - baud_rate (int): Serial communication baud rate (default: 115200)
   - timeout (double): Serial communication timeout (default: 2.0)
 
 Arduino Commands:
@@ -49,7 +49,7 @@ class ServoController(Node):
         
         # Declare parameters
         self.declare_parameter('serial_port', '/dev/ttyACM0')
-        self.declare_parameter('baud_rate', 9600)
+        self.declare_parameter('baud_rate', 115200)
         self.declare_parameter('timeout', 2.0)
         
         # Get parameters

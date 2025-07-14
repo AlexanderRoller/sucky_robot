@@ -32,6 +32,7 @@ install(PROGRAMS
   nodes/battery_monitor.py
   nodes/cyclone_controller.py
   nodes/servo_controller.py
+  nodes/joystick_controller.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

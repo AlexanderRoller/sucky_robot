@@ -1,3 +1,6 @@
+# Combined Joystick Configuration for Sucky Robot
+# This file contains all joystick settings including movement, cyclone, and door controls
+
 joy_node:
   ros__parameters:
     device_id: 0
@@ -20,8 +23,39 @@ teleop_node:
     scale_angular_turbo:
       yaw: 1.25
 
-
     enable_button: 6
     enable_turbo_button: 7
 
     require_enable_button: true
+
+joystick_controller:
+  ros__parameters:
+    # PS4 Controller Button Mapping:
+    # Button Index | PS4 Button Name | Function
+    # -------------|-----------------|----------
+    # 0            | Square          | Cyclone Toggle
+    # 1            | X               | Emergency Stop
+    # 2            | Circle          | Doors Toggle
+    # 3            | Triangle        | Status Check
+    # 4            | L1              | (unused)
+    # 5            | R1              | (unused)
+    # 6            | L2              | Enable Movement (used by teleop)
+    # 7            | R2              | Turbo Mode (used by teleop)
+    # 8            | Share           | (unused)
+    # 9            | Options         | (unused)
+    # 10           | L3 (left stick) | (unused)
+    # 11           | R3 (right stick)| (unused)
+    # 12           | PS Button       | (unused)
+    # 13           | Touchpad        | (unused)
+    
+    # Button assignments
+    cyclone_button: 0      # Square button - toggle cyclone on/off
+    doors_button: 2        # Triangle button - toggle doors open/closed
+    emergency_button: 1    # Circle button - emergency stop (cyclone off, doors closed)
+    status_button: 3       # Cross button - log current status
+    
+    # Debounce time in seconds to prevent button spam
+    debounce_time: 0.5
+    
+    # Enable/disable logging for debugging
+    verbose_logging: false

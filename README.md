@@ -2,7 +2,7 @@
 
 ![Sucky Robot](media/sucky.jpeg)
 
-A ROS2-based differential drive robot with advanced sensor integration, autonomous navigation, and teleoperation capabilities.
+A ROS2-based differential drive robot with adv## 🔌 Arduino Control## 📁 Package StructureSystemnced sensor integration, autonomous navigation, and teleoperation capabilities.
 
 ## 👥 Credits
 
@@ -14,13 +14,16 @@ Developed by:
 
 This is a continuation of a previous project ([sweepy](https://github.com/AlexanderRoller/sweepy_ws))
 
-## � Overview & Features
+## 🔍 Overview & Features
 
 The Sucky Robot is a comprehensive ROS2 robotics platform featuring:
 
 ### Hardware
 - **Differential Drive Base**: Custom roboclaw motor controller integration
 - **Sensor Suite**: SICK TiM781 LiDAR, Intel RealSense D455, IMU
+- **Arduino Control System**: Cyclone vacuum and servo door control via Arduino
+- **Vacuum System**: High-powered cyclone vacuum with ESC control
+- **Door Mechanism**: Dual servo-controlled collection doors
 - **Power**: 24V battery system with monitoring
 
 ### Capabilities
@@ -29,8 +32,11 @@ The Sucky Robot is a comprehensive ROS2 robotics platform featuring:
 - 🧭 **Autonomous Navigation**: Path planning and obstacle avoidance
 - 📡 **Multi-sensor Fusion**: EKF-based sensor fusion for robust localization
 - 🔋 **Battery Monitoring**: Real-time voltage monitoring with low-battery warnings
+- 🌪️ **Vacuum Control**: Arduino-controlled cyclone with safety timeouts
+- 🚪 **Door Control**: Servo-driven collection doors with open/close functionality
+- 🎮 **Integrated Control**: PS4 controller support for vacuum and door operations
 
-##  Installation
+## 📦 Installation
 
 ### Prerequisites
 - ROS2 Humble
@@ -90,7 +96,16 @@ export ROS_DOMAIN_ID=1
 
 **Note**: Enterprise networks may block multicast traffic. Contact IT to allow multicast on ports 7400-7447.
 
-## 📁 Package Structure
+## � Arduino Control System
+
+Arduino-controlled vacuum and door system with ROS2 integration.
+
+### Components
+- **Arduino Uno**: Controls cyclone vacuum (ESC) and servo doors
+- **PS4 Controller**: Square=vacuum, Triangle=doors, Circle=emergency stop
+
+
+## �📁 Package Structure
 
 ```
 sucky_robot/
@@ -101,8 +116,14 @@ sucky_robot/
 │   │   ├── urdf/                       # Robot description
 │   │   ├── meshes/                     # 3D models
 │   │   ├── nodes/                      # ROS2 executable nodes
+│   │   │   ├── cyclone_controller.py   # Vacuum control node
+│   │   │   ├── servo_controller.py     # Door servo control node
+│   │   │   └── joystick_controller.py  # PS4 controller integration
 │   │   ├── tools/                      # Utility scripts and tools
 │   │   └── test/                       # Test files
+│   ├── sucky_arduino/                  # Arduino source code
+│   │   └── src/
+│   │       └── main.cpp                # Arduino vacuum/servo controller
 │   ├── roboclaw_hardware_interface/    # Motor controller interface
 │   └── roboclaw_serial/               # Serial communication
 ├── build/                              # Build artifacts
@@ -129,6 +150,12 @@ sudo usermod -a -G dialout $USER
 # Logout and login again
 ```
 
+**Arduino connection:**
+```bash
+ls /dev/ttyACM*  # Should show /dev/ttyACM0
+```
+
+
 **LiDAR connection:**
 ```bash
 ping 192.168.0.1  # Check network connection
@@ -142,12 +169,13 @@ lsusb | grep Intel  # Check USB connection
 ## ⚙️ Configuration
 
 - **LiDAR IP**: `192.168.0.1`
-- **Serial Port**: `/dev/ttyACM1` (roboclaw)
+- **Roboclaw Serial**: `/dev/ttyACM1`
+- **Arduino Serial**: `/dev/ttyACM0`
 - **Battery Range**: 22.0V - 29.4V
 
 ## 🙏 Acknowledgments
 
-Thanks to the ROS2 community, SICK AG, Intel, and all contributors to the roboclaw driver.
+Thanks to the ROS2 community, SICK AG, Intel, Arduino community, and all contributors to the roboclaw driver. Special thanks to the servo library and ESC control communities for their invaluable resources.
 
 ---
 

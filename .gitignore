@@ -8,6 +8,7 @@ miscellaneous/
 *.pyc
 __pycache__/
 frames_*
+rosbag*
 
 # Editor settings
 .vscode/
