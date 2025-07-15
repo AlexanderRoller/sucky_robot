@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Test script for joystick controller functionality.
-This script simulates button presses to test the joystick controller without needing a physical PS4 controller.
+Test script for sucky joy controller functionality.
+This script simulates button presses to test the sucky joy controller without needing a physical PS4 controller.
 
 Usage:
   python3 test_joystick.py cyclone  - Test cyclone toggle

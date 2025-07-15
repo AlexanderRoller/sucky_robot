@@ -30,9 +30,8 @@ install(
 # Install Python nodes
 install(PROGRAMS
   nodes/battery_monitor.py
-  nodes/cyclone_controller.py
-  nodes/servo_controller.py
-  nodes/joystick_controller.py
+  nodes/sucky_joy.py
+  nodes/arduino_controller.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

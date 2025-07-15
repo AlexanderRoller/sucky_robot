@@ -1,211 +1,232 @@
 import os
 import xacro
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, RegisterEventHandler, ExecuteProcess
+from launch.actions import IncludeLaunchDescription, RegisterEventHandler
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 from launch.event_handlers import OnProcessExit
 
-def generate_launch_description():
-    bringup_pkg = get_package_share_directory('sucky')
-    rviz_config_path = os.path.join(
-        get_package_share_directory('sucky'),'config','rviz.rviz')
 
-    # Load and Process Xacro
+def generate_launch_description():
+    # Package directories and config paths
+    bringup_pkg = get_package_share_directory('sucky')
+    
+    # Load and process URDF from Xacro
     xacro_file = os.path.join(bringup_pkg, 'urdf', 'robot.urdf.xacro')
     with open(xacro_file) as f:
         doc = xacro.parse(f)
-
-    # Process the parsed Xacro document to generate the URDF XML
     xacro.process_doc(doc)
     robot_description = {'robot_description': doc.toxml()}
+    
+    # Configuration file paths
+    joy_params = os.path.join(bringup_pkg, 'config', 'joystick.yaml')
+    robot_controllers_path = os.path.join(bringup_pkg, 'config', 'sucky_controllers.yaml')
+    twist_mux_params = os.path.join(bringup_pkg, 'config', 'twist_mux.yaml')
+    ekf_params_file = os.path.join(bringup_pkg, 'config', 'ekf.yaml')
+    
+    # SICK LiDAR configuration
+    sick_scan_pkg_prefix = get_package_share_directory('sick_scan_xd')
+    tim_launch_file_path = os.path.join(sick_scan_pkg_prefix, 'launch/sick_tim_7xx.launch')
 
-    # Joint State Publisher for static RViz visualization - reduce output
+    # ============================================================================
+    # CORE NODES (Robot Description and State Publishers)
+    # ============================================================================
+    
+    # Robot State Publisher - publishes robot description and transforms
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        output='log',
+        parameters=[robot_description, {'use_sim_time': False}]
+    )
+
+    # Joint State Publisher for static visualization
     joint_state_publisher = Node(
         package='joint_state_publisher',
         executable='joint_state_publisher',
         name='joint_state_publisher',
-        output='log'  # Reduce console output
-    )
-
-    # Robot State Publisher - reduce output
-    robot_state_publisher = Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        output='log',  # Reduce console output
-        parameters=[robot_description]
-    )
-
-    # Rviz - reduce update rate for better performance
-    rviz_node = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        output='log',  # Reduce console output
-        arguments=['-d', rviz_config_path],
-        parameters=[{'use_sim_time': False}],
-        # Reduce priority to give more CPU to camera
-        additional_env={'ROS_LOG_LEVEL': 'WARN'}
-    )
-
-    joy_params = os.path.join(get_package_share_directory('sucky'),'config','joystick.yaml')
-    joystick_node = Node(
-            package='joy',
-            executable='joy_node',
-            parameters=[joy_params, {'use_sim_time': False}],
-    )
-
-    teleop_node = Node(
-            package='teleop_twist_joy',
-            executable='teleop_node',
-            name='teleop_node',
-            parameters=[joy_params, {'use_sim_time': False}],
-            remappings=[('/cmd_vel','/cmd_vel_joy')],
-    )
-
-    # Joystick controller for cyclone and doors
-    joystick_controller_params = os.path.join(get_package_share_directory('sucky'),'config','joystick_controller.yaml')
-    joystick_controller_node = Node(
-        package='sucky',
-        executable='joystick_controller.py',
-        name='joystick_controller',
         output='log',
-        parameters=[joystick_controller_params, {'use_sim_time': False}]
+        parameters=[{'use_sim_time': False}]
     )
 
-    robot_controllers_path = os.path.join(get_package_share_directory('sucky'),'config','sucky_controllers.yaml')
+    # ============================================================================
+    # CONTROL SYSTEM (Hardware Interface and Controllers)
+    # ============================================================================
+    
+    # ROS2 Control Node - hardware interface
     ros2_control_node = Node(
         package="controller_manager",
         executable="ros2_control_node",
         parameters=[robot_description, robot_controllers_path, {'use_sim_time': False}],
-        output="both",
-        #remappings=[('/diffbot_base_controller/odom', '/odom'),]
-        
+        output="both"
     )
 
-    robot_controller_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["diffbot_base_controller", "--controller-manager", "/controller_manager"],
-        output="both",
-        parameters=[{'use_sim_time': False}],
-    )
-
-    joint_state_publisher_spawner = Node(
+    # Joint State Broadcaster - publishes joint states from hardware
+    joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
         output="both",
-        parameters=[{'use_sim_time': False}],
+        parameters=[{'use_sim_time': False}]
     )
 
-    twist_mux_params = os.path.join(get_package_share_directory('sucky'),'config','twist_mux.yaml')
-    twist_mux = Node(
+    # Differential Drive Controller - controls robot movement
+    diffbot_controller_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["diffbot_base_controller", "--controller-manager", "/controller_manager"],
+        output="both",
+        parameters=[{'use_sim_time': False}]
+    )
+
+    # ============================================================================
+    # INPUT DEVICES (Joystick and Teleop)
+    # ============================================================================
+    
+    # Joystick Driver
+    joystick_node = Node(
+        package='joy',
+        executable='joy_node',
+        parameters=[joy_params, {'use_sim_time': False}],
+        output='log'
+    )
+
+    # Teleop Twist Joy - converts joystick to cmd_vel
+    teleop_node = Node(
+        package='teleop_twist_joy',
+        executable='teleop_node',
+        name='teleop_node',
+        parameters=[joy_params, {'use_sim_time': False}],
+        remappings=[('/cmd_vel', '/cmd_vel_joy')],
+        output='log'
+    )
+
+    # Custom Sucky Joy Controller - handles cyclone and door controls
+    sucky_joy_node = Node(
+        package='sucky',
+        executable='sucky_joy.py',
+        name='sucky_joy',
+        output='log',
+        parameters=[joy_params, {'use_sim_time': False}]
+    )
+
+    # Twist Mux - arbitrates between different cmd_vel sources
+    twist_mux_node = Node(
         package="twist_mux",
         executable="twist_mux",
         parameters=[twist_mux_params, {'use_sim_time': False}],
-        remappings=[('/cmd_vel_out','/diffbot_base_controller/cmd_vel_unstamped')]
+        remappings=[('/cmd_vel_out', '/diffbot_base_controller/cmd_vel_unstamped')],
+        output='log'
     )
 
-    sick_scan_pkg_prefix = get_package_share_directory('sick_scan_xd')
-    tim_launch_file_path = os.path.join(sick_scan_pkg_prefix, 'launch/sick_tim_7xx.launch')
-
-    sick_node = Node(
+    # ============================================================================
+    # SENSORS (LiDAR, Camera, Battery)
+    # ============================================================================
+    
+    # SICK TiM LiDAR
+    sick_lidar_node = Node(
         package='sick_scan_xd',
         executable='sick_generic_caller',
-        output='log',  # Keep log output to reduce CPU
+        output='log',
         parameters=[{'use_sim_time': False}],
         arguments=[
             tim_launch_file_path,
             'tf_base_frame_id:=sick_link',
-            'tf_publish_rate:=20.0',  # Reduce from 30 to 20 Hz
+            'tf_publish_rate:=20.0',
             'hostname:=192.168.0.1',
-            'min_ang:=-1.22173',  # -70 degrees in radians
-            'max_ang:=1.22173',   # 70 degrees in radians
+            'min_ang:=-1.22173',  # -70 degrees
+            'max_ang:=1.22173',   # 70 degrees
         ]
     )
 
-    ekf_params_file = os.path.join(get_package_share_directory('sucky'), 'config', 'ekf.yaml')
-
-    ekf_node = Node(
-        package='robot_localization',
-        executable='ekf_node',
-        name='ekf_filter_node',
-        output='log',  # Reduce console output
-        parameters=[ekf_params_file, {'use_sim_time': False}],
-    )
-
-    slam_node = IncludeLaunchDescription(
+    # RealSense Camera
+    realsense_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
-        get_package_share_directory('sucky'),'launch','slam.launch.py'
-        )]), launch_arguments={'use_sim_time': 'false'}.items()
+            bringup_pkg, 'launch', 'realsense.launch.py'
+        )])
     )
 
+    # Battery Monitor
     battery_monitor_node = Node(
         package='sucky',
         executable='battery_monitor.py',
         name='battery_monitor',
-        output='log',  # Reduce output
+        output='log',
         parameters=[{
-            'serial_port': '/dev/ttyACM1', 
+            'serial_port': '/dev/ttyACM1',
             'address': 128,
-            'publish_rate': 0.1, 
+            'publish_rate': 0.1,
             'min_voltage': 22.0,
             'max_voltage': 29.4,
             'use_sim_time': False
         }]
     )
 
-    realsense_node = IncludeLaunchDescription(
+    # ============================================================================
+    # LOCALIZATION AND MAPPING
+    # ============================================================================
+    
+    # Extended Kalman Filter for sensor fusion
+    ekf_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='log',
+        parameters=[ekf_params_file, {'use_sim_time': False}]
+    )
+
+    # SLAM 
+    slam_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory('sucky'), 'launch', 'realsense.launch.py'
-        )])
+            bringup_pkg, 'launch', 'slam.launch.py'
+        )]),
+        launch_arguments={'use_sim_time': 'false'}.items()
     )
 
-    # Cyclone controller node
-    cyclone_controller_node = Node(
+    # ============================================================================
+    # ACTUATORS AND CUSTOM HARDWARE
+    # ============================================================================
+    
+    # Arduino Controller - manages cyclone and door actuators
+    arduino_controller_node = Node(
         package='sucky',
-        executable='cyclone_controller.py',
-        name='cyclone_controller',
+        executable='arduino_controller.py',
+        name='arduino_controller',
         output='log',
         parameters=[{
             'serial_port': '/dev/ttyACM0',
-            'baud_rate': 9600,
-            'timeout': 2.0,
-            'use_sim_time': False
-        }]
-    )
-
-    # Servo controller node  
-    servo_controller_node = Node(
-        package='sucky',
-        executable='servo_controller.py',
-        name='servo_controller',
-        output='log',
-        parameters=[{
-            'serial_port': '/dev/ttyACM0',
-            'baud_rate': 9600,
+            'baud_rate': 115200,
             'timeout': 2.0,
             'use_sim_time': False
         }]
     )
 
     return LaunchDescription([
-        joint_state_publisher,
+        # Core nodes - robot description and state publishers (highest priority)
         robot_state_publisher,
+        joint_state_publisher,
+        
+        # Control system - hardware interface and controllers
+        ros2_control_node,
+        joint_state_broadcaster_spawner,
+        diffbot_controller_spawner,
+        
+        # Input devices - joystick and teleop
         joystick_node,
         teleop_node,
-        joystick_controller_node,
-        ros2_control_node,
-        twist_mux,
-        robot_controller_spawner,
-        joint_state_publisher_spawner,
-        sick_node,
+        sucky_joy_node,
+        twist_mux_node,
+        
+        # Sensors - LiDAR, camera, battery monitoring
+        sick_lidar_node,
         realsense_node,
+        battery_monitor_node,
+        
+        # Localization and mapping - depends on sensors
         ekf_node,
         slam_node,
-        battery_monitor_node,
-        cyclone_controller_node,
-        servo_controller_node,
+        
+        # Custom hardware actuators
+        arduino_controller_node,
     ])

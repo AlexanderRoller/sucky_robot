@@ -15,22 +15,20 @@ Service Clients:
 
 PS4 Controller Button Mapping:
   - Square (button 0): Toggle cyclone on/off
-  - Triangle (button 2): Toggle doors open/closed  
-  - Circle (button 1): Emergency stop (turn off cyclone and close doors)
-  - Cross (button 3): Status check (log current states)
+  - Circle (button 2): Toggle doors open/closed  
+  - X (button 1): Status check (log current states)
 
 Parameters:
   - cyclone_button (int): Button index for cyclone toggle (default: 0 - Square)
-  - doors_button (int): Button index for doors toggle (default: 2 - Triangle)
-  - emergency_button (int): Button index for emergency stop (default: 1 - Circle)
-  - status_button (int): Button index for status check (default: 3 - Cross)
+  - doors_button (int): Button index for doors toggle (default: 2 - Circle)
+  - status_button (int): Button index for status check (default: 1 - X)
   - debounce_time (double): Time in seconds to prevent button spam (default: 0.5)
 
 Usage:
-  ros2 run sucky joystick_controller.py
+  ros2 run sucky sucky_joy.py
   
   or with parameters:
-  ros2 run sucky joystick_controller.py --ros-args -p cyclone_button:=0
+  ros2 run sucky sucky_joy.py --ros-args -p cyclone_button:=0
 """
 
 import rclpy
@@ -40,21 +38,19 @@ from std_srvs.srv import SetBool
 import time
 
 
-class JoystickController(Node):
+class SuckyJoy(Node):
     def __init__(self):
-        super().__init__('joystick_controller')
+        super().__init__('sucky_joy')
         
         # Declare parameters for button mapping
         self.declare_parameter('cyclone_button', 0)    # Square button
-        self.declare_parameter('doors_button', 2)      # Triangle button  
-        self.declare_parameter('emergency_button', 1)  # Circle button
-        self.declare_parameter('status_button', 3)     # Cross button
+        self.declare_parameter('doors_button', 2)      # Circle button  
+        self.declare_parameter('status_button', 1)     # X button
         self.declare_parameter('debounce_time', 0.5)   # 500ms debounce
         
         # Get parameters
         self.cyclone_button = self.get_parameter('cyclone_button').get_parameter_value().integer_value
         self.doors_button = self.get_parameter('doors_button').get_parameter_value().integer_value
-        self.emergency_button = self.get_parameter('emergency_button').get_parameter_value().integer_value
         self.status_button = self.get_parameter('status_button').get_parameter_value().integer_value
         self.debounce_time = self.get_parameter('debounce_time').get_parameter_value().double_value
         
@@ -64,7 +60,7 @@ class JoystickController(Node):
         self.last_button_time = {}
         
         # Initialize button press times
-        for button in [self.cyclone_button, self.doors_button, self.emergency_button, self.status_button]:
+        for button in [self.cyclone_button, self.doors_button, self.status_button]:
             self.last_button_time[button] = 0.0
         
         # Service clients
@@ -82,20 +78,18 @@ class JoystickController(Node):
         if not self.doors_client.wait_for_service(timeout_sec=5.0):
             self.get_logger().warn("Doors service not available")
         
-        self.get_logger().info("Joystick controller ready!")
+        self.get_logger().info("Sucky Joy controller ready!")
         self.get_logger().info(f"Button mapping:")
         self.get_logger().info(f"  Square (button {self.cyclone_button}): Toggle cyclone")
-        self.get_logger().info(f"  Triangle (button {self.doors_button}): Toggle doors")
-        self.get_logger().info(f"  Circle (button {self.emergency_button}): Emergency stop")
-        self.get_logger().info(f"  Cross (button {self.status_button}): Status check")
+        self.get_logger().info(f"  Circle (button {self.doors_button}): Toggle doors")
+        self.get_logger().info(f"  X (button {self.status_button}): Status check")
 
     def joy_callback(self, msg):
         """Handle joystick button presses"""
         current_time = time.time()
         
         # Check if we have enough buttons
-        if len(msg.buttons) <= max(self.cyclone_button, self.doors_button, 
-                                   self.emergency_button, self.status_button):
+        if len(msg.buttons) <= max(self.cyclone_button, self.doors_button, self.status_button):
             return
         
         # Cyclone toggle (Square button)
@@ -104,19 +98,13 @@ class JoystickController(Node):
             self.last_button_time[self.cyclone_button] = current_time
             self.toggle_cyclone()
         
-        # Doors toggle (Triangle button)
+        # Doors toggle (Circle button)
         if (msg.buttons[self.doors_button] and 
             current_time - self.last_button_time[self.doors_button] > self.debounce_time):
             self.last_button_time[self.doors_button] = current_time
             self.toggle_doors()
         
-        # Emergency stop (Circle button)
-        if (msg.buttons[self.emergency_button] and 
-            current_time - self.last_button_time[self.emergency_button] > self.debounce_time):
-            self.last_button_time[self.emergency_button] = current_time
-            self.emergency_stop()
-        
-        # Status check (Cross button)
+        # Status check (X button)
         if (msg.buttons[self.status_button] and 
             current_time - self.last_button_time[self.status_button] > self.debounce_time):
             self.last_button_time[self.status_button] = current_time
@@ -151,26 +139,6 @@ class JoystickController(Node):
                 lambda f: self.doors_response_callback(f, new_state))
         else:
             self.get_logger().error("Doors service not ready")
-
-    def emergency_stop(self):
-        """Emergency stop: turn off cyclone and close doors"""
-        self.get_logger().warn("EMERGENCY STOP activated!")
-        
-        # Turn off cyclone
-        if self.cyclone_client.service_is_ready():
-            request = SetBool.Request()
-            request.data = False
-            future = self.cyclone_client.call_async(request)
-            future.add_done_callback(
-                lambda f: self.cyclone_response_callback(f, False))
-        
-        # Close doors
-        if self.doors_client.service_is_ready():
-            request = SetBool.Request()
-            request.data = False
-            future = self.doors_client.call_async(request)
-            future.add_done_callback(
-                lambda f: self.doors_response_callback(f, False))
 
     def log_status(self):
         """Log current status"""
@@ -207,15 +175,15 @@ def main(args=None):
     rclpy.init(args=args)
     
     try:
-        joystick_controller = JoystickController()
-        rclpy.spin(joystick_controller)
+        sucky_joy = SuckyJoy()
+        rclpy.spin(sucky_joy)
     except KeyboardInterrupt:
         pass
     except Exception as e:
         print(f"Error in main: {e}")
     finally:
-        if 'joystick_controller' in locals():
-            joystick_controller.destroy_node()
+        if 'sucky_joy' in locals():
+            sucky_joy.destroy_node()
         rclpy.shutdown()
 
 

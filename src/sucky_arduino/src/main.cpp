@@ -6,6 +6,7 @@
 void processCommand();
 void setCycloneState(bool state);
 void setDoorState(bool open);
+void updateDoorMovement();
 void printStatus();
 void printHelp();
 void serialEvent();
@@ -38,8 +39,18 @@ bool stringComplete = false;
 constexpr unsigned long CYCLONE_TIMEOUT_MS = 600000;
 unsigned long cycloneStartTime = 0;
 
+// Door movement variables
+bool doorMoving = false;
+unsigned long lastDoorUpdate = 0;
+constexpr unsigned long DOOR_STEP_DELAY = 15; // milliseconds between steps
+constexpr uint8_t DOOR_STEP_SIZE = 2; // degrees per step
+uint8_t currentLeftPos = DOOR_LEFT_CLOSED;
+uint8_t currentRightPos = DOOR_RIGHT_CLOSED;
+uint8_t targetLeftPos = DOOR_LEFT_CLOSED;
+uint8_t targetRightPos = DOOR_RIGHT_CLOSED;
+
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(115200); // Set serial baud rate
 
   doorLeft.attach(5);  // Attach left door servo to pin 5
   doorRight.attach(3); // Attach right door servo to pin 3
@@ -47,6 +58,12 @@ void setup() {
   doorLeft.write(180);  // Set left door to neutral position 180-closed
   doorRight.write(0); // Set right door to neutral position 0-closed
   doorsOpen = false;  // Initialize doors as closed
+  
+  // Initialize door positions
+  currentLeftPos = DOOR_LEFT_CLOSED;
+  currentRightPos = DOOR_RIGHT_CLOSED;
+  targetLeftPos = DOOR_LEFT_CLOSED;
+  targetRightPos = DOOR_RIGHT_CLOSED;
 
   esc.attach(PWM_PIN);            // 50 Hz by default (Timer-1)
 
@@ -54,6 +71,15 @@ void setup() {
   esc.writeMicroseconds(PULSE_MIN);   // idle pulse
   delay(3000);                        // wait for ESC “ready” beep
   /* --------------------------------*/
+
+  // Wait for serial connection to stabilize
+  while (!Serial) {
+    delay(10);
+  }
+  delay(500); // Additional stabilization time
+  
+  // Send ready signal
+  Serial.println("ARDUINO_READY");
 
 }
 
@@ -64,6 +90,9 @@ void loop() {
     esc.writeMicroseconds(PULSE_MIN);
     Serial.println("SAFETY: Cyclone auto-shutdown after timeout");
   }
+  
+  // Update door movement
+  updateDoorMovement();
   
   // Handle serial input
   if (stringComplete) {
@@ -125,18 +154,62 @@ void setCycloneState(bool state) {
   }
 }
 
+void updateDoorMovement() {
+  if (!doorMoving) return;
+  
+  if (millis() - lastDoorUpdate >= DOOR_STEP_DELAY) {
+    bool leftDone = false;
+    bool rightDone = false;
+    
+    // Update left door position
+    if (currentLeftPos != targetLeftPos) {
+      if (currentLeftPos < targetLeftPos) {
+        currentLeftPos = min(currentLeftPos + DOOR_STEP_SIZE, targetLeftPos);
+      } else {
+        currentLeftPos = max(currentLeftPos - DOOR_STEP_SIZE, targetLeftPos);
+      }
+      doorLeft.write(currentLeftPos);
+    } else {
+      leftDone = true;
+    }
+    
+    // Update right door position
+    if (currentRightPos != targetRightPos) {
+      if (currentRightPos < targetRightPos) {
+        currentRightPos = min(currentRightPos + DOOR_STEP_SIZE, targetRightPos);
+      } else {
+        currentRightPos = max(currentRightPos - DOOR_STEP_SIZE, targetRightPos);
+      }
+      doorRight.write(currentRightPos);
+    } else {
+      rightDone = true;
+    }
+    
+    // Check if movement is complete
+    if (leftDone && rightDone) {
+      doorMoving = false;
+      Serial.print("Doors ");
+      Serial.println(doorsOpen ? "OPEN" : "CLOSED");
+    }
+    
+    lastDoorUpdate = millis();
+  }
+}
+
 void setDoorState(bool open) {
   if (open && !doorsOpen) {
     doorsOpen = true;
-    doorLeft.write(DOOR_LEFT_OPEN);
-    doorRight.write(DOOR_RIGHT_OPEN);
-    Serial.println("Doors OPEN");
+    targetLeftPos = DOOR_LEFT_OPEN;
+    targetRightPos = DOOR_RIGHT_OPEN;
+    doorMoving = true;
+    Serial.println("Doors opening...");
   }
   else if (!open && doorsOpen) {
     doorsOpen = false;
-    doorLeft.write(DOOR_LEFT_CLOSED);
-    doorRight.write(DOOR_RIGHT_CLOSED);
-    Serial.println("Doors CLOSED");
+    targetLeftPos = DOOR_LEFT_CLOSED;
+    targetRightPos = DOOR_RIGHT_CLOSED;
+    doorMoving = true;
+    Serial.println("Doors closing...");
   }
   else {
     Serial.print("Doors already ");
@@ -149,7 +222,16 @@ void printStatus() {
   Serial.print("Cyclone: ");
   Serial.println(cycloneOn ? "ON" : "OFF");
   Serial.print("Doors: ");
-  Serial.println(doorsOpen ? "OPEN" : "CLOSED");
+  Serial.print(doorsOpen ? "OPEN" : "CLOSED");
+  if (doorMoving) {
+    Serial.print(" (MOVING)");
+  }
+  Serial.println();
+  Serial.print("Door Positions - Left: ");
+  Serial.print(currentLeftPos);
+  Serial.print("°, Right: ");
+  Serial.print(currentRightPos);
+  Serial.println("°");
   Serial.print("ESC Pulse: ");
   Serial.print(cycloneOn ? PULSE_MAX : PULSE_MIN);
   Serial.println(" µs");

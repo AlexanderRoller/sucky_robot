@@ -2,58 +2,60 @@
 
 ![Sucky Robot](media/sucky.jpeg)
 
-A ROS2-based differential drive robot with adv## 🔌 Arduino Control## 📁 Package StructureSystemnced sensor integration, autonomous navigation, and teleoperation capabilities.
+A ROS2-based differential drive robot with advanced sensor integration, autonomous navigation, and teleoperation capabilities.
 
-## 👥 Credits
+## 👥 Contributors
 
-Developed by:
-- **Alexander Roller** ([AlexanderRoller](https://github.com/AlexanderRoller)) - Systems integration
-- **Jason Koubi** ([jkoubs](https://github.com/jkoubs)) - Software and simulation
-- **Benjamin Cantarero** - Mechanical design
-- **George Fox University** - Chassis design and fabrication
+**Development Team:**
+- **Alexander Roller** ([AlexanderRoller](https://github.com/AlexanderRoller)) - Systems Integration
+- **Jason Koubi** ([jkoubs](https://github.com/jkoubs)) - Software & Simulation  
+- **Benjamin Cantarero** - Mechanical Design
+- **George Fox University** - Chassis Design & Fabrication
 
-This is a continuation of a previous project ([sweepy](https://github.com/AlexanderRoller/sweepy_ws))
+*This project builds upon the previous [sweepy](https://github.com/AlexanderRoller/sweepy_ws) robot.*
 
-## 🔍 Overview & Features
+## 🔍 Overview
 
-The Sucky Robot is a comprehensive ROS2 robotics platform featuring:
+The Sucky Robot is a comprehensive ROS2 robotics platform designed for autonomous cleaning and debris collection.
 
-### Hardware
+### Hardware Components
 - **Differential Drive Base**: Custom roboclaw motor controller integration
 - **Sensor Suite**: SICK TiM781 LiDAR, Intel RealSense D455, IMU
-- **Arduino Control System**: Cyclone vacuum and servo door control via Arduino
+- **Arduino Control System**: Cyclone vacuum and servo door control
 - **Vacuum System**: High-powered cyclone vacuum with ESC control
 - **Door Mechanism**: Dual servo-controlled collection doors
 - **Power**: 24V battery system with monitoring
 
-### Capabilities
-- 🎮 **Joystick Teleoperation**: Real-time control with configurable speed limits
+### Key Features
+- 🎮 **Teleoperation**: PS4 controller support with configurable speed limits
 - 🗺️ **SLAM Mapping**: Real-time simultaneous localization and mapping
 - 🧭 **Autonomous Navigation**: Path planning and obstacle avoidance
-- 📡 **Multi-sensor Fusion**: EKF-based sensor fusion for robust localization
-- 🔋 **Battery Monitoring**: Real-time voltage monitoring with low-battery warnings
+- 📡 **Sensor Fusion**: EKF-based multi-sensor localization
+- 🔋 **Battery Monitoring**: Real-time voltage monitoring with warnings
 - 🌪️ **Vacuum Control**: Arduino-controlled cyclone with safety timeouts
-- 🚪 **Door Control**: Servo-driven collection doors with open/close functionality
-- 🎮 **Integrated Control**: PS4 controller support for vacuum and door operations
+- 🚪 **Door Control**: Servo-driven collection doors
 
 ## 📦 Installation
 
 ### Prerequisites
-- ROS2 Humble
-- Ubuntu 22.04
+- **OS**: Ubuntu 22.04
+- **ROS**: ROS2 Humble
+- **Python**: 3.10+
 
 ### Quick Setup
 ```bash
-# Clone and build
-git clone --recursive <repository_url> ~/sucky_robot
+# Clone repository with submodules
+git clone --recursive https://github.com/AlexanderRoller/sucky_robot.git ~/sucky_robot
 cd ~/sucky_robot
+
+# Run setup script
 ./setup.sh
 
 # Source the workspace
 source install/setup.bash
 ```
 
-### Manual Dependencies (if needed)
+### Manual Installation (if needed)
 ```bash
 # Install ROS2 dependencies
 rosdep install --from-paths src --ignore-src -r -y --skip-keys="roboclaw_hardware_interface roboclaw_serial"
@@ -69,16 +71,16 @@ pip install pyserial
 # Build and launch robot system
 source build.sh && source launch_sucky.sh
 
-# Launch host system (on separate computer)
+# Launch host system (on remote computer)
 source launch_host.sh
 ```
 
-### Common Commands
+### Individual Components
 ```bash
-# Launch complete robot system
+# Complete robot system
 ros2 launch sucky sucky.launch.py
 
-# SLAM mapping only
+# SLAM mapping
 ros2 launch sucky slam.launch.py
 
 # RViz visualization (host computer)
@@ -88,24 +90,36 @@ ros2 launch sucky host.launch.py
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
-### Networking
-For multi-machine operation, set the same ROS_DOMAIN_ID on both robot and host:
+### Controller Commands
+- **Square**: Toggle vacuum on/off
+- **Triangle**: Toggle doors open/close
+- **Circle**: Emergency stop
+- **Left stick**: Drive control
+- **Right stick**: Rotation control
+
+### Multi-Machine Setup
+For distributed operation, set matching ROS_DOMAIN_ID:
 ```bash
 export ROS_DOMAIN_ID=1
 ```
 
-**Note**: Enterprise networks may block multicast traffic. Contact IT to allow multicast on ports 7400-7447.
+> **Note**: Enterprise networks may block multicast traffic on ports 7400-7447.
 
-## � Arduino Control System
+## 🔌 Arduino Control
 
-Arduino-controlled vacuum and door system with ROS2 integration.
+Arduino-based control system for vacuum and door mechanisms.
 
-### Components
-- **Arduino Uno**: Controls cyclone vacuum (ESC) and servo doors
-- **PS4 Controller**: Square=vacuum, Triangle=doors, Circle=emergency stop
+### Hardware
+- **Arduino Uno**: Controls ESC and servo motors
+- **ESC**: Electronic speed controller for vacuum motor
+- **Servos**: Dual servo motors for collection doors
 
+### ROS2 Integration
+- **Topics**: `/vacuum_control`, `/door_control`
+- **Serial**: `/dev/ttyACM0` (configurable)
+- **Safety**: Automatic timeout and emergency stop
 
-## �📁 Package Structure
+## 📁 Package Structure
 
 ```
 sucky_robot/
@@ -116,67 +130,87 @@ sucky_robot/
 │   │   ├── urdf/                       # Robot description
 │   │   ├── meshes/                     # 3D models
 │   │   ├── nodes/                      # ROS2 executable nodes
-│   │   │   ├── cyclone_controller.py   # Vacuum control node
-│   │   │   ├── servo_controller.py     # Door servo control node
-│   │   │   └── joystick_controller.py  # PS4 controller integration
+│   │   │   ├── arduino_controller.py   # Arduino communication node
+│   │   │   ├── battery_monitor.py      # Battery monitoring node
+│   │   │   └── sucky_joy.py            # PS4 controller integration
 │   │   ├── tools/                      # Utility scripts and tools
 │   │   └── test/                       # Test files
-│   ├── sucky_arduino/                  # Arduino source code
-│   │   └── src/
-│   │       └── main.cpp                # Arduino vacuum/servo controller
+│   ├── sucky_arduino/                  # Arduino PlatformIO project
+│   │   ├── src/
+│   │   │   └── main.cpp                # Arduino vacuum/servo controller
+│   │   ├── include/                    # Arduino headers
+│   │   ├── lib/                        # Arduino libraries
+│   │   └── platformio.ini              # PlatformIO configuration
 │   ├── roboclaw_hardware_interface/    # Motor controller interface
-│   └── roboclaw_serial/               # Serial communication
-├── build/                              # Build artifacts
-├── install/                            # Install space
+│   └── roboclaw_serial/                # Serial communication library
 ├── media/                              # Images and documentation
-├── build.sh                           # Build script
-├── launch_sucky.sh                    # Robot launch script
-├── launch_host.sh                     # Host launch script
-└── README.md                          # This file
+├── build.sh                            # Build script
+├── setup.sh                            # Initial setup script
+├── launch_sucky.sh                     # Robot launch script
+├── launch_host.sh                      # Host launch script
+└── README.md                           # This file
 ```
 
 ## 🔧 Troubleshooting
 
-### Common Issues
+### Setup Issues
 
-**Missing roboclaw packages:**
+**Missing submodules:**
 ```bash
 git submodule update --init --recursive
 ```
 
-**Serial port access:**
+**Serial permissions:**
 ```bash
 sudo usermod -a -G dialout $USER
-# Logout and login again
+# Log out and back in
 ```
 
-**Arduino connection:**
+### Hardware Diagnostics
+
+**Check Arduino connection:**
 ```bash
 ls /dev/ttyACM*  # Should show /dev/ttyACM0
 ```
 
-
-**LiDAR connection:**
+**Check Roboclaw connection:**
 ```bash
-ping 192.168.0.1  # Check network connection
+ls /dev/ttyACM*  # Should show /dev/ttyACM1
 ```
 
-**Camera issues:**
+**Test LiDAR connection:**
 ```bash
-lsusb | grep Intel  # Check USB connection
+ping 192.168.0.1
+```
+
+**Verify camera:**
+```bash
+lsusb | grep Intel
 ```
 
 ## ⚙️ Configuration
 
-- **LiDAR IP**: `192.168.0.1`
-- **Roboclaw Serial**: `/dev/ttyACM1`
-- **Arduino Serial**: `/dev/ttyACM0`
-- **Battery Range**: 22.0V - 29.4V
+### Hardware Settings
+| Component | Configuration | Default |
+|-----------|---------------|---------|
+| LiDAR | IP Address | `192.168.0.1` |
+| Roboclaw | Serial Port | `/dev/ttyACM1` |
+| Arduino | Serial Port | `/dev/ttyACM0` |
+| Battery | Voltage Range | 22.0V - 29.4V |
+
+### Performance Tuning
+- **Max Speed**: Configurable in `config/sucky_controllers.yaml`
+- **Safety Limits**: Battery thresholds and timeouts
 
 ## 🙏 Acknowledgments
 
-Thanks to the ROS2 community, SICK AG, Intel, Arduino community, and all contributors to the roboclaw driver. Special thanks to the servo library and ESC control communities for their invaluable resources.
+Special thanks to:
+- ROS2 Community & Open Source Robotics Foundation
+- SICK AG for LiDAR technology
+- Intel for RealSense camera support
+- Arduino Community for embedded control resources
+- Roboclaw driver contributors
 
 ---
 
-For questions or support, please open an issue or contact the maintainers.
+**Questions or Issues?** Please open an issue or contact the maintainers.

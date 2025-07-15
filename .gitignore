@@ -12,3 +12,6 @@ rosbag*
 
 # Editor settings
 .vscode/
+
+#developement
+sucky_camera_bringup.launch.py
