@@ -9,7 +9,7 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
-                <mesh filename="file://$(find sucky)/meshes/sick781.stl" />
+                <mesh filename="package://sucky/meshes/sick781.stl" />
             </geometry>
             <material name="grey"/>
         </visual>

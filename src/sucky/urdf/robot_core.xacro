@@ -57,14 +57,14 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 ${pi/2}"/>
       <geometry>
-        <mesh filename="file://$(find sucky)/meshes/Sucky.stl" scale="1 1 1" />
+        <mesh filename="package://sucky/meshes/Sucky.stl" scale="1 1 1" />
       </geometry>
       <material name="orange"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 ${pi/2}"/>
       <geometry>
-        <mesh filename="file://$(find sucky)/meshes/Sucky.stl" scale="1 1 1" />
+        <mesh filename="package://sucky/meshes/Sucky.stl" scale="1 1 1" />
       </geometry>
     </collision>
   </link>
@@ -80,13 +80,13 @@
   <link name="left_wheel">
       <visual>
           <geometry>
-              <mesh filename="file://$(find sucky)/meshes/Big_Wheel.stl" scale="0.001 0.001 0.001" />
+              <mesh filename="package://sucky/meshes/Big_Wheel.stl" scale="0.001 0.001 0.001" />
           </geometry>
           <material name="black"/>
       </visual>
       <collision>
           <geometry>
-              <mesh filename="file://$(find sucky)/meshes/Big_Wheel.stl" scale="0.001 0.001 0.001" />
+              <mesh filename="package://sucky/meshes/Big_Wheel.stl" scale="0.001 0.001 0.001" />
           </geometry>
       </collision>
   </link>
@@ -103,13 +103,13 @@
   <link name="right_wheel">
       <visual>
           <geometry>
-              <mesh filename="file://$(find sucky)/meshes/Big_Wheel.stl" scale="0.001 0.001 0.001" />
+              <mesh filename="package://sucky/meshes/Big_Wheel.stl" scale="0.001 0.001 0.001" />
           </geometry>
           <material name="black"/>
       </visual>
       <collision>
           <geometry>
-              <mesh filename="file://$(find sucky)/meshes/Big_Wheel.stl" scale="0.001 0.001 0.001" />
+              <mesh filename="package://sucky/meshes/Big_Wheel.stl" scale="0.001 0.001 0.001" />
           </geometry>
       </collision>
   </link>
