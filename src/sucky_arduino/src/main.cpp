@@ -17,7 +17,7 @@ constexpr uint8_t DOOR_RIGHT_PIN = 3;  // Right door servo pin
 
 // ESC pulse configuration
 constexpr uint16_t PULSE_MIN = 1000;   // µs (idle)
-constexpr uint16_t PULSE_MAX = 2000;   // µs (full power)
+constexpr uint16_t PULSE_MAX = 2980;   // µs (full power)
 
 // Door servo positions
 constexpr uint8_t DOOR_LEFT_CLOSED = 180;    // Left door closed position
