@@ -133,6 +133,7 @@ def generate_launch_description():
         arguments=[
             tim_launch_file_path,
             'tf_base_frame_id:=sick_link',
+            'cloud_topic:=sick_cloud',
             'tf_publish_rate:=20.0',
             'hostname:=192.168.0.1',
             'min_ang:=-1.22173',  # -70 degrees
@@ -154,7 +155,7 @@ def generate_launch_description():
         name='battery_monitor',
         output='log',
         parameters=[{
-            'serial_port': '/dev/ttyACM1',
+            'serial_port': '/dev/ttyACM2',
             'address': 128,
             'publish_rate': 0.1,
             'min_voltage': 22.0,

@@ -2,9 +2,9 @@
 
 battery_monitor:
   ros__parameters:
-    serial_port: "/dev/ttyACM1"      
+    serial_port: "/dev/ttyACM2"      
     address: 128                      # Roboclaw address (same as motor control)
-    baud_rate: 115200                # Serial baud rate
+    baud_rate: 115200                # Serial baud rate (legacy parameter, not used)
     timeout: 2.0                     # Communication timeout (seconds)
     retry_attempts: 3                # Number of retry attempts per reading
     
@@ -17,6 +17,16 @@ battery_monitor:
     max_voltage: 29.4                # High battery warning threshold (V)
                                      # Example for 7S LiPo: 25.2V nominal, 29.4V full, 21.0V cutoff
                                      # Example for 6S LiPo: 22.2V nominal, 25.2V full, 18.0V cutoff
+    
+    # Automatic shutdown configuration
+    enable_shutdown: true            # Enable automatic shutdown on critical low voltage
+    shutdown_voltage: 20.5           # Critical voltage threshold for automatic shutdown (V)
+                                     # Set safely above your battery's absolute minimum
+                                     # For 7S LiPo: 20.5V (2.93V per cell) gives good safety margin
+                                     # For 6S LiPo: 18.0V (3.0V per cell) gives good safety margin
+    shutdown_delay: 30.0             # Delay before shutdown in seconds (allows time to cancel)
+    shutdown_consecutive_readings: 3 # Number of consecutive low readings before shutdown
+                                     # Prevents shutdown on voltage spikes under load
     
     # Diagnostics
     use_sim_time: false              # Set to true for simulation

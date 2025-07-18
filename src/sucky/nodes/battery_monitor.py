@@ -10,6 +10,7 @@ import time
 import os
 import fcntl
 import errno
+import subprocess
 from threading import Lock
 
 class BatteryMonitor(Node):
@@ -22,13 +23,17 @@ class BatteryMonitor(Node):
         super().__init__('battery_monitor')
         
         # Parameters
-        self.declare_parameter('serial_port', '/dev/ttyACM1')
+        self.declare_parameter('serial_port', '/dev/ttyACM0')
         self.declare_parameter('address', 128)
         self.declare_parameter('publish_rate', 0.2)  # Very slow rate to minimize interference
         self.declare_parameter('timeout', 3.0)  # Longer timeout for shared access
         self.declare_parameter('retry_attempts', 2)  # Fewer retries to minimize interference
         self.declare_parameter('min_voltage', 22.0)  # V - low battery warning
         self.declare_parameter('max_voltage', 29.4)  # V - full battery (7S LiPo)
+        self.declare_parameter('shutdown_voltage', 20.5)  # V - critical voltage for shutdown
+        self.declare_parameter('shutdown_delay', 30.0)  # seconds - delay before shutdown
+        self.declare_parameter('enable_shutdown', True)  # Enable automatic shutdown
+        self.declare_parameter('shutdown_consecutive_readings', 3)  # Number of consecutive low readings before shutdown
         
         # Get parameters
         self.serial_port = self.get_parameter('serial_port').get_parameter_value().string_value
@@ -38,6 +43,10 @@ class BatteryMonitor(Node):
         self.retry_attempts = self.get_parameter('retry_attempts').get_parameter_value().integer_value
         self.min_voltage = self.get_parameter('min_voltage').get_parameter_value().double_value
         self.max_voltage = self.get_parameter('max_voltage').get_parameter_value().double_value
+        self.shutdown_voltage = self.get_parameter('shutdown_voltage').get_parameter_value().double_value
+        self.shutdown_delay = self.get_parameter('shutdown_delay').get_parameter_value().double_value
+        self.enable_shutdown = self.get_parameter('enable_shutdown').get_parameter_value().bool_value
+        self.shutdown_consecutive_readings = self.get_parameter('shutdown_consecutive_readings').get_parameter_value().integer_value
         
         # Publishers
         self.voltage_pub = self.create_publisher(Float32, 'battery_voltage', 10)
@@ -50,6 +59,11 @@ class BatteryMonitor(Node):
         self.connection_retries = 0
         self.max_connection_retries = 5
         
+        # Shutdown state
+        self.low_voltage_count = 0
+        self.shutdown_initiated = False
+        self.shutdown_timer = None
+        
         # Serial connection
         self.serial_conn = None
         self.serial_lock = Lock()
@@ -60,6 +74,11 @@ class BatteryMonitor(Node):
         self.get_logger().info(f'Roboclaw battery monitor (shared) initialized at address {self.address}')
         self.get_logger().info(f'Publishing at {self.publish_rate} Hz to minimize interference with ROS2 control')
         self.get_logger().info(f'Using serial port: {self.serial_port}')
+        self.get_logger().info(f'Battery monitoring: min={self.min_voltage}V, max={self.max_voltage}V')
+        if self.enable_shutdown:
+            self.get_logger().info(f'Automatic shutdown ENABLED: threshold={self.shutdown_voltage}V, delay={self.shutdown_delay}s, readings={self.shutdown_consecutive_readings}')
+        else:
+            self.get_logger().info('Automatic shutdown DISABLED')
     
     def connect_serial(self):
         """Initialize serial connection to roboclaw with shared access considerations"""
@@ -196,6 +215,9 @@ class BatteryMonitor(Node):
         if voltage is not None:
             self.last_valid_voltage = voltage
             
+            # Check for critical voltage and initiate shutdown if needed
+            self.check_shutdown_conditions(voltage)
+            
             # Publish voltage
             voltage_msg = Float32()
             voltage_msg.data = voltage
@@ -237,6 +259,12 @@ class BatteryMonitor(Node):
         elif voltage is None:
             diag_status.level = DiagnosticStatus.ERROR
             diag_status.message = 'No battery voltage reading available'
+        elif self.shutdown_initiated:
+            diag_status.level = DiagnosticStatus.ERROR
+            diag_status.message = f'CRITICAL: System shutdown initiated due to low battery voltage: {voltage:.2f}V'
+        elif voltage <= self.shutdown_voltage:
+            diag_status.level = DiagnosticStatus.ERROR
+            diag_status.message = f'CRITICAL: Battery voltage at shutdown threshold: {voltage:.2f}V (count: {self.low_voltage_count}/{self.shutdown_consecutive_readings})'
         elif voltage < self.min_voltage:
             diag_status.level = DiagnosticStatus.WARN
             diag_status.message = f'Low battery voltage: {voltage:.2f}V'
@@ -273,13 +301,99 @@ class BatteryMonitor(Node):
         consecutive_errors_kv.value = str(self.consecutive_errors)
         diag_status.values.append(consecutive_errors_kv)
         
+        # Add shutdown status information
+        shutdown_enabled_kv = KeyValue()
+        shutdown_enabled_kv.key = 'shutdown_enabled'
+        shutdown_enabled_kv.value = str(self.enable_shutdown)
+        diag_status.values.append(shutdown_enabled_kv)
+        
+        shutdown_voltage_kv = KeyValue()
+        shutdown_voltage_kv.key = 'shutdown_voltage'
+        shutdown_voltage_kv.value = f'{self.shutdown_voltage:.2f}'
+        diag_status.values.append(shutdown_voltage_kv)
+        
+        low_voltage_count_kv = KeyValue()
+        low_voltage_count_kv.key = 'low_voltage_count'
+        low_voltage_count_kv.value = str(self.low_voltage_count)
+        diag_status.values.append(low_voltage_count_kv)
+        
+        shutdown_initiated_kv = KeyValue()
+        shutdown_initiated_kv.key = 'shutdown_initiated'
+        shutdown_initiated_kv.value = str(self.shutdown_initiated)
+        diag_status.values.append(shutdown_initiated_kv)
+        
         diag_array.status.append(diag_status)
         self.diagnostics_pub.publish(diag_array)
+    
+    def check_shutdown_conditions(self, voltage):
+        """Check if shutdown conditions are met and initiate shutdown if necessary"""
+        if not self.enable_shutdown:
+            return
+            
+        if self.shutdown_initiated:
+            return
+            
+        if voltage <= self.shutdown_voltage:
+            self.low_voltage_count += 1
+            self.get_logger().warning(f'Critical battery voltage detected: {voltage:.2f}V (count: {self.low_voltage_count}/{self.shutdown_consecutive_readings})')
+            
+            if self.low_voltage_count >= self.shutdown_consecutive_readings:
+                self.initiate_shutdown()
+        else:
+            # Reset counter if voltage recovers
+            if self.low_voltage_count > 0:
+                self.get_logger().info(f'Battery voltage recovered to {voltage:.2f}V, canceling shutdown')
+                self.low_voltage_count = 0
+                if self.shutdown_timer is not None:
+                    self.shutdown_timer.cancel()
+                    self.shutdown_timer = None
+    
+    def initiate_shutdown(self):
+        """Initiate graceful system shutdown"""
+        if self.shutdown_initiated:
+            return
+            
+        self.shutdown_initiated = True
+        self.get_logger().fatal(f'CRITICAL: Battery voltage too low ({self.last_valid_voltage:.2f}V <= {self.shutdown_voltage}V)')
+        self.get_logger().fatal(f'Initiating system shutdown in {self.shutdown_delay} seconds to prevent data corruption')
+        
+        # Start shutdown timer
+        self.shutdown_timer = self.create_timer(self.shutdown_delay, self.execute_shutdown)
+    
+    def execute_shutdown(self):
+        """Execute the actual system shutdown"""
+        self.get_logger().fatal('Executing system shutdown due to critical battery voltage')
+        
+        try:
+            # Cancel the timer to prevent repeated calls
+            if self.shutdown_timer is not None:
+                self.shutdown_timer.cancel()
+                self.shutdown_timer = None
+            
+            # Try graceful shutdown first
+            subprocess.run(['sudo', 'shutdown', '-h', 'now'], 
+                         check=False, timeout=10)
+        except subprocess.TimeoutExpired:
+            self.get_logger().error('Graceful shutdown timed out, forcing immediate shutdown')
+            try:
+                subprocess.run(['sudo', 'poweroff', '-f'], 
+                             check=False, timeout=5)
+            except Exception as e:
+                self.get_logger().error(f'Failed to force shutdown: {e}')
+        except Exception as e:
+            self.get_logger().error(f'Shutdown command failed: {e}')
+            # As a last resort, try alternative shutdown methods
+            try:
+                os.system('sudo shutdown -h now')
+            except Exception as e2:
+                self.get_logger().error(f'Alternative shutdown also failed: {e2}')
     
     def destroy_node(self):
         """Clean up on shutdown"""
         if hasattr(self, 'timer'):
             self.timer.cancel()
+        if hasattr(self, 'shutdown_timer') and self.shutdown_timer is not None:
+            self.shutdown_timer.cancel()
         if self.serial_conn and self.serial_conn.is_open:
             self.serial_conn.close()
         super().destroy_node()

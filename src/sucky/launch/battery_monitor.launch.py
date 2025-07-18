@@ -1,62 +1,73 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
+import os
 
 def generate_launch_description():
     
-    # Declare launch arguments
+    # Get package directory
+    pkg_share = FindPackageShare('sucky')
+    
+    # Path to config file
+    config_file = PathJoinSubstitution([
+        pkg_share,
+        'config',
+        'battery_monitor.yaml'
+    ])
+    
+    # Declare launch arguments for overrides
     serial_port_arg = DeclareLaunchArgument(
         'serial_port',
-        default_value='/dev/ttyACM1',
+        default_value='/dev/ttyACM2',
         description='Serial port for roboclaw communication (shared with ROS2 control)'
     )
     
-    address_arg = DeclareLaunchArgument(
-        'address',
-        default_value='128',
-        description='Roboclaw address'
+    enable_shutdown_arg = DeclareLaunchArgument(
+        'enable_shutdown',
+        default_value='true',
+        description='Enable automatic shutdown on critical battery voltage'
     )
     
-    publish_rate_arg = DeclareLaunchArgument(
-        'publish_rate',
-        default_value='0.2',
-        description='Rate to publish battery voltage (Hz) - very slow to minimize interference'
+    shutdown_voltage_arg = DeclareLaunchArgument(
+        'shutdown_voltage',
+        default_value='20.5',
+        description='Critical voltage threshold for automatic shutdown (V)'
     )
     
-    min_voltage_arg = DeclareLaunchArgument(
-        'min_voltage',
-        default_value='22.0',
-        description='Minimum battery voltage threshold (V)'
+    shutdown_delay_arg = DeclareLaunchArgument(
+        'shutdown_delay',
+        default_value='30.0',
+        description='Delay before shutdown execution (seconds)'
     )
     
-    max_voltage_arg = DeclareLaunchArgument(
-        'max_voltage',
-        default_value='29.4',
-        description='Maximum battery voltage threshold (V)'
-    )
-    
-    # Roboclaw battery monitor node (shared access version)
+    # Battery monitor node
     battery_monitor_node = Node(
-        package='sweepy_hardware_drivers',
-        executable='roboclaw_battery_monitor_shared.py',
-        name='roboclaw_battery_monitor_shared',
+        package='sucky',
+        executable='battery_monitor.py',
+        name='battery_monitor',
         output='screen',
-        parameters=[{
-            'serial_port': LaunchConfiguration('serial_port'),
-            'address': LaunchConfiguration('address'),
-            'publish_rate': LaunchConfiguration('publish_rate'),
-            'min_voltage': LaunchConfiguration('min_voltage'),
-            'max_voltage': LaunchConfiguration('max_voltage'),
-            'use_sim_time': False
-        }]
+        parameters=[
+            config_file,
+            {
+                # Allow command-line overrides
+                'serial_port': LaunchConfiguration('serial_port'),
+                'enable_shutdown': LaunchConfiguration('enable_shutdown'),
+                'shutdown_voltage': LaunchConfiguration('shutdown_voltage'),
+                'shutdown_delay': LaunchConfiguration('shutdown_delay'),
+            }
+        ],
+        remappings=[
+            ('battery_voltage', 'battery_voltage'),
+            ('diagnostics', 'diagnostics')
+        ]
     )
     
     return LaunchDescription([
         serial_port_arg,
-        address_arg,
-        publish_rate_arg,
-        min_voltage_arg,
-        max_voltage_arg,
+        enable_shutdown_arg,
+        shutdown_voltage_arg,
+        shutdown_delay_arg,
         battery_monitor_node
     ])

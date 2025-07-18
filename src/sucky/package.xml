@@ -38,6 +38,7 @@
   <!-- Sensors and perception -->
   <exec_depend>sick_scan_xd</exec_depend>
   <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>isaac_ros_visual_slam</exec_depend>
   
   <!-- Navigation and localization -->
   <exec_depend>slam_toolbox</exec_depend>

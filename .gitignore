@@ -15,3 +15,4 @@ rosbag*
 
 #developement
 sucky_camera_bringup.launch.py
+vslam.launch.py

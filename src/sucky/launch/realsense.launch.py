@@ -68,7 +68,7 @@ configurable_parameters = [{'name': 'camera_name',                  'default': '
                            {'name': 'diagnostics_period',           'default': '0.0', 'description': 'Rate of publishing diagnostics. 0=Disabled'},
                            {'name': 'publish_tf',                   'default': 'false', 'description': '[bool] enable/disable publishing static & dynamic TF'},
                            {'name': 'tf_publish_rate',              'default': '0.0', 'description': '[double] rate in Hz for publishing dynamic TF'},
-                           {'name': 'pointcloud.enable',            'default': 'true', 'description': 'enable point cloud'},
+                           {'name': 'pointcloud.enable',            'default': 'false', 'description': 'enable point cloud'},
                            {'name': 'pointcloud.stream_filter',     'default': '0', 'description': 'texture stream for pointcloud (0=any, 1=depth, 2=color)'},
                            {'name': 'pointcloud.stream_index_filter','default': '0', 'description': 'texture stream index for pointcloud'},
                            {'name': 'pointcloud.ordered_pc',        'default': 'false', 'description': 'enable ordered point cloud'},

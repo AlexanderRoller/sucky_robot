@@ -20,6 +20,7 @@ find_package(sick_scan_xd REQUIRED)
 find_package(slam_toolbox REQUIRED)
 find_package(robot_localization REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
+find_package(isaac_ros_visual_slam REQUIRED)
 
 # Install directories
 install(

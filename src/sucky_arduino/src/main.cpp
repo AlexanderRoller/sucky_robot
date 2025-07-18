@@ -140,11 +140,18 @@ void setCycloneState(bool state) {
   if (state && !cycloneOn) {
     cycloneOn = true;
     cycloneStartTime = millis();
-    esc.writeMicroseconds(PULSE_MAX);
+    for (int i = 1600; i < PULSE_MAX; i++) {
+      esc.writeMicroseconds(i);
+      delay(5);
+    }
     Serial.println("Cyclone ON");
   }
   else if (!state && cycloneOn) {
     cycloneOn = false;
+    for (int i = PULSE_MAX; i > 1600; i--) {
+      esc.writeMicroseconds(i);
+      delay(5);
+    }
     esc.writeMicroseconds(PULSE_MIN);
     Serial.println("Cyclone OFF");
   }
